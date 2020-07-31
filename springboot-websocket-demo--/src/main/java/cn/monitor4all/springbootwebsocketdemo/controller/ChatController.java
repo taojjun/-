@@ -57,7 +57,7 @@ public class ChatController {
         container.addMessageListener(RedisListenerBean.messageListenerAdapter, new PatternTopic(chatMessage.getmId()+".userStatus"));
         LOGGER.info("User added in Chatroom:" + chatMessage.getSender());
         try {
-            headerAccessor.getSessionAttributes().put("username", chatMessage.getSender());
+            headerAccessor.getSessionAttributes().put("sender", chatMessage.getSender());
             headerAccessor.getSessionAttributes().put("mId", chatMessage.getmId());
             String adapter = chatMessage.getAdapter();
             if (!StringUtils.isEmpty(adapter)){
@@ -69,5 +69,27 @@ public class ChatController {
             LOGGER.error(e.getMessage(), e);
         }
     }
+    @MessageMapping("/chat.connectUser")
+    public void connectUser(@Payload ChatMessage chatMessage, SimpMessageHeaderAccessor headerAccessor) throws ClassNotFoundException {
+        RedisMessageListenerContainer container = SpringUtil.getBean(RedisMessageListenerContainer.class);
 
+//        messageListenerAdapter.afterPropertiesSet();
+        container.addMessageListener(RedisListenerBean.messageListenerAdapter, new PatternTopic(chatMessage.getAdapter()+"_to_"+chatMessage.getSender()));
+        //container.addMessageListener(listenerAdapter, new PatternTopic(msgToMeeting));
+        //container.addMessageListener(RedisListenerBean.messageListenerAdapter, new PatternTopic(chatMessage.getmId()+".userStatus"));
+        LOGGER.info("User send msg from:" + chatMessage.getSender());
+        LOGGER.info("Subscribed Redis channel: " + chatMessage.getAdapter()+"_to_"+chatMessage.getSender());
+        try {
+            headerAccessor.getSessionAttributes().put("sender", chatMessage.getSender());
+            String adapter = chatMessage.getAdapter();
+            if (!StringUtils.isEmpty(adapter)){
+                headerAccessor.getSessionAttributes().put("adapter", chatMessage.getAdapter());
+            }
+            redisTemplate.opsForSet().add(chatMessage.getSender()+"_to_"+chatMessage.getAdapter(), "");
+            System.out.println(chatMessage.toString());
+            redisTemplate.convertAndSend(chatMessage.getSender()+"_to_"+chatMessage.getAdapter(), JsonUtil.parseObjToJson(chatMessage));
+        } catch (Exception e) {
+            LOGGER.error(e.getMessage(), e);
+        }
+    }
 }

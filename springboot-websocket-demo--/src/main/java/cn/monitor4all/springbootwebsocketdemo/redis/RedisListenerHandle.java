@@ -53,17 +53,29 @@ public class RedisListenerHandle extends MessageListenerAdapter {
         }
 
         ChatMessage chatMessage = JsonUtil.parseJsonToObj(rawMsg, ChatMessage.class);
-        if (null != chatMessage.getmId() && chatMessage.getmId().toString().equals(topic)) {
-            LOGGER.info("Send message to all users:" + rawMsg);
-            if (chatMessage != null) {
-                chatService.sendMsg(chatMessage);
-            }
-        } else if (null != chatMessage.getmId() && (chatMessage.getmId()+".userStatus").equals(topic)) {
-            if (chatMessage != null) {
-                chatService.alertUserStatus(chatMessage);
+        if (null != chatMessage.getAdapter()){
+            if ( (chatMessage.getSender()+"_to_"+chatMessage.getAdapter()).equals(topic)) {
+                LOGGER.info("Send message to  user:" + rawMsg);
+                if (chatMessage != null) {
+                    chatService.sendMsg(chatMessage);
+                }
+            } else {
+                LOGGER.warn("No further operation with this topic!");
             }
         }else {
-            LOGGER.warn("No further operation with this topic!");
+            if (null != chatMessage.getmId() && chatMessage.getmId().toString().equals(topic)) {
+                LOGGER.info("Send message to all users:" + rawMsg);
+                if (chatMessage != null) {
+                    chatService.sendMsg(chatMessage);
+                }
+            } else if (null != chatMessage.getmId() && (chatMessage.getmId()+".userStatus").equals(topic)) {
+                if (chatMessage != null) {
+                    chatService.alertUserStatus(chatMessage);
+                }
+            }else {
+                LOGGER.warn("No further operation with this topic!");
+            }
         }
+
     }
 }

@@ -48,21 +48,38 @@ public class WebSocketEventListener {
 
         StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
 
-        String username = (String) headerAccessor.getSessionAttributes().get("username");
-        String mId = (String) headerAccessor.getSessionAttributes().get("mId").toString();
-        String adapter = (String) headerAccessor.getSessionAttributes().get("adapter");
-        if(username != null) {
-            LOGGER.info("User Disconnected : " + username);
+        String sender = (String) headerAccessor.getSessionAttributes().get("sender");
+        String mId ;
+        String adapter;
+        if(sender != null) {
+            /**
+             * 通过判断mid和adapter是否为空，来区分公共聊天还是私聊
+             */
+            if (null != headerAccessor.getSessionAttributes().get("adapter")){
+                adapter = (String) headerAccessor.getSessionAttributes().get("adapter");
+                LOGGER.info("User Disconnected : " + sender);
+                ChatMessage chatMessage = new ChatMessage();
+                chatMessage.setType(ChatMessage.MessageType.LEAVE);
+                chatMessage.setSender(sender);
+                try {
+                    //redisTemplate.opsForSet().remove(adapter+".onlineUsers", username);
+                    redisTemplate.convertAndSend(chatMessage.getSender()+"_to_"+chatMessage.getAdapter(), JsonUtil.parseObjToJson(chatMessage));
+                } catch (Exception e) {
+                    LOGGER.error(e.getMessage(), e);
+                }
+            } else {
+            mId = (String) headerAccessor.getSessionAttributes().get("mId").toString();
+            LOGGER.info("User Disconnected : " + sender);
             ChatMessage chatMessage = new ChatMessage();
             chatMessage.setType(ChatMessage.MessageType.LEAVE);
-            chatMessage.setSender(username);
+            chatMessage.setSender(sender);
             try {
-                redisTemplate.opsForSet().remove(mId+".onlineUsers", username);
+                redisTemplate.opsForSet().remove(mId+".onlineUsers", sender);
                 redisTemplate.convertAndSend(mId+".userStatus", JsonUtil.parseObjToJson(chatMessage));
             } catch (Exception e) {
                 LOGGER.error(e.getMessage(), e);
             }
-
+            }
         }
     }
 }

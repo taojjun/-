@@ -17,8 +17,18 @@ public class ChatService {
     private SimpMessageSendingOperations simpMessageSendingOperations;
 
     public void sendMsg(@Payload ChatMessage chatMessage) {
-        LOGGER.info("Send msg by simpMessageSendingOperations:" + chatMessage.toString());
-        simpMessageSendingOperations.convertAndSend("/topic/"+chatMessage.getmId(), chatMessage);
+
+        /**
+         * 判断是私聊还是公共聊天
+         */
+        if (null != chatMessage.getAdapter()){
+            LOGGER.info("Send msg by simpMessageSendingOperations to user:" + chatMessage.toString());
+            simpMessageSendingOperations.convertAndSendToUser(chatMessage.getAdapter(),"/user/"+chatMessage.getSender()+"_to_"+chatMessage.getAdapter(), chatMessage);
+        }else {
+            LOGGER.info("Send msg by simpMessageSendingOperations to user:" + chatMessage.toString());
+            simpMessageSendingOperations.convertAndSend("/topic/"+chatMessage.getmId(), chatMessage);
+
+        }
     }
 
     public void alertUserStatus(@Payload ChatMessage chatMessage) {
